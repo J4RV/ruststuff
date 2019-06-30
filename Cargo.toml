@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 rust-crypto = "0.2.36"
 hex = "0.3.1"
+num_cpus = "1.0"
