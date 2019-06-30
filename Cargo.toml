@@ -1,0 +1,9 @@
+[package]
+name = "shabreaker"
+version = "0.1.0"
+authors = ["Jose Rojo <6jarv91@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+rust-crypto = "0.2.36"
+hex = "0.3.1"
