@@ -15,25 +15,32 @@ fn main() {
     for cpu in 0..num_cpus::get() {
         let mac = mac.clone();
         thread::spawn(move || {
-            let mac:&[u8] = &mac;
+            let mac = mac.as_slice();
             for i in ((cpu as u8)..=255).step_by(num_cpus::get()) {
-                for x in 0..=255 {
-                    for y in 0..=255 {
-                        for z in 0..=255 {
-                            if valid_mac(msg, mac, &[i, x, y, z], &digest) {
-                                println!("Key: {:x?}", &[i, x, y, z]);
-                                println!("Done in {} seconds", now.elapsed().as_secs());
-                                std::process::exit(0);
-                            }
-                        }
-                    }
+                if let Some(valid_key) = bruteforce_block(i, msg, mac, &digest) {
+                    println!("Key: {:x?}", valid_key);
+                    println!("Done in {} seconds", now.elapsed().as_secs());
+                    std::process::exit(0);
                 }
             }
         });
     }
 
-    thread::sleep(Duration::from_secs(60*30));
+    thread::sleep(Duration::from_secs(60 * 30));
     println!("Key not found in 30 minutes");
+}
+
+fn bruteforce_block(i: u8, msg: &[u8], mac: &[u8], digest: &Sha1) -> Option<[u8; 4]> {
+    for x in 0..=255 {
+        for y in 0..=255 {
+            for z in 0..=255 {
+                if valid_mac(msg, mac, &[i, x, y, z], &digest) {
+                    return Some([i, x, y, z]);
+                }
+            }
+        }
+    }
+    return None;
 }
 
 fn valid_mac(msg: &[u8], mac: &[u8], key: &[u8], digest: &Sha1) -> bool {
