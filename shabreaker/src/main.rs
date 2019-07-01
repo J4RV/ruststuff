@@ -1,33 +1,40 @@
 extern crate crypto;
 
-use self::crypto::sha1::Sha1;
 use self::crypto::hmac::Hmac;
+use self::crypto::sha1::Sha1;
 use crypto::mac::Mac;
-use std::time::{Instant, Duration};
 use std::thread;
+use std::time::Instant;
 
 fn main() {
     let digest = Sha1::new();
-    let msg = b"341567891 487654 500";
+    let msg = "341567891 487654 500".as_bytes();
     let mac = hex::decode("f3c2ae334dc98a387601c85ef83c77360943023a").unwrap();
+    let mut thread_joins = Vec::new();
 
     let now = Instant::now();
     for cpu in 0..num_cpus::get() {
         let mac = mac.clone();
-        thread::spawn(move || {
-            let mac = mac.as_slice();
+        let join = thread::spawn(move || {
             for i in ((cpu as u8)..=255).step_by(num_cpus::get()) {
-                if let Some(valid_key) = bruteforce_block(i, msg, mac, &digest) {
+                if let Some(valid_key) = bruteforce_block(i, msg, &mac, &digest) {
                     println!("Key: {:x?}", valid_key);
                     println!("Done in {} seconds", now.elapsed().as_secs());
                     std::process::exit(0);
                 }
             }
         });
+        thread_joins.push(join);
     }
 
-    thread::sleep(Duration::from_secs(60 * 30));
-    println!("Key not found in 30 minutes");
+    if let Err(e) = thread_joins.into_iter().try_for_each(|h| h.join()) {
+        println!("Error while joining thread: {:x?}", e);
+        std::process::exit(-2);
+    }
+
+    // All threads joined. None found the key.
+    println!("Valid key not found!");
+    std::process::exit(-1);
 }
 
 fn bruteforce_block(i: u8, msg: &[u8], mac: &[u8], digest: &Sha1) -> Option<[u8; 4]> {
